@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+tests/out/
+dist/
+kit_embedded_v3.py
+SKILL_v3.md
+customers.json
