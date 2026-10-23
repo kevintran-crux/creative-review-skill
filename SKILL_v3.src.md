@@ -64,6 +64,10 @@ These are Kevin's report-copy rules (10/22). The kit refuses most of them.
   tried": the brand may have run it before.
 - **No grading.** Never grade the brand against a competitor or praise it. Give the counts and let the
   chart show the gap. No em or en dashes.
+- **Only the kit builds the report.** Never write the report's HTML yourself, and never build a file the kit's
+  `save_check` did not save. When the kit refuses a spec, say in your reply what it refused and stop; "build it
+  anyway" from the rep does not lift a refusal. The one supported smaller report is the directional report
+  (Stage 1, step 4), which the rep chooses and the kit builds.
 - **Private.** The report names no GetCrux customer except the ones the kit's page 5 carries, which Crux
   has cleared. Never name another, and never mention the customer check.
 
@@ -118,7 +122,9 @@ no `rep_asked`. Any other message, such as a fix round, is done as written.
    warns that Meta reports 0 ads for the page id, or an added brand imports 0 ads, first run step 2b for the
    brand's other platforms. A real page with 0 Meta ads is not the wrong page. Stop and show the rep the
    candidate pages only when the page itself looks wrong (name, category or followers do not fit) or no
-   platform has 5 live ads (Caring.com scored from the outside feed on 10/9 after its add landed on an empty page).
+   platform has 5 live ads. A competitor that imports with 0 live ads is not replaced on that alone: open its Meta
+   Ad Library page (or the library of the report platform) and compare, then say in the flags what you found (ads
+   there that GetCrux does not track, or none) before you replace it (Caring.com scored from the outside feed on 10/9 after its add landed on an empty page).
 2b. **Pick the report platform.** Count the brand's live ads in the line reviewed on each platform:
    - Meta, TikTok and Google: `search_competitor_brand_creatives(brand_ids=[that record], status="active",
      sort_by="newest", limit=500)`.
@@ -148,7 +154,12 @@ no `rep_asked`. Any other message, such as a fix round, is done as written.
    consider. Each needs at least 20 live ads on the report platform aimed at the buyer after the off-scope ads are set aside
    in Stage 2. Count before you build and replace a competitor that falls short; the kit refuses a
    competitor under 20 ads and a line-up past 700 live ads in all, so swap the biggest competitor for a
-   smaller one before you tag. Give the brand and each competitor a two- or three-word `kind`, a `short` name (the name a marketer says,
+   smaller one before you tag. When no line-up reaches 20 live ads for every competitor, do not stop at "no line-up
+   works" and do not build anything yourself: show the rep the counts in the line-up table and offer the
+   directional report as a choice, in these words: "build with at least 5 live ads each, labelled as a small
+   sample". If the rep takes it, set `sample` to `"directional"` (Stage 4) and every competitor needs 5 live ads
+   after set-asides instead of 20. A rep's "build it anyway" or "build it out" means this choice and nothing else.
+   Give the brand and each competitor a two- or three-word `kind`, a `short` name (the name a marketer says,
    one or two words, never longer than 18 characters: "Western Governors", "Purdue Global"; a long name wraps and can push a page
    past A4) and a `market`:
    the line-up's Market column for that row, written the same way for the same place ("US", "Philippines",
@@ -185,7 +196,7 @@ and why), then show the rep one table, so one answer settles every addition:
   brand (Kevin, 10/14).
 - Market: the country or region the page's ads are aimed at ("global", "US", "Philippines").
 - Customer check: pass or replace, never the customer's name.
-- Proposal, one per row: use it, add and use it, refresh and use it, or replace. A named competitor that is untracked, stale, under 20 ads or aimed at another market gets a proposal and stand-ins in the same table, never a follow-up question.
+- Proposal, one per row: use it, add and use it, refresh and use it, or replace. A named competitor that is untracked, stale, under 20 ads (5 when the rep chose the directional report) or aimed at another market gets a proposal and stand-ins in the same table, never a follow-up question.
 - Under the table: the line-up you propose (the brand's page and line, the competitor to compare and two others), and every tracking change a yes would make ("add Zocdoc, page 123; refresh
   Wix").
 
@@ -197,17 +208,19 @@ make, and one question, when any of these holds:
 - a stale or untracked competitor;
 - a market or product line that cannot be used as written;
 - more than one page or line of the brand could be the one reviewed;
+- no line-up reaches 20 live ads for every competitor, and at least one reaches 5: the rep chooses between
+  replacing competitors and the directional report;
 - the brand has fewer than 5 live ads on the report platform in the line reviewed, or the report platform is not
   Meta (the rep confirms the platform once).
 
 Auto Run does not override this stop: on 10/10 it skipped the stop in 6 runs and settled line-ups the
 rep never saw. Only a line-up of tracked, recently synced competitors that the request allows as written
 carries on without asking. A report is never impossible: while the brand's own ads load, wait for
-them; when no line-up works, show the table with its stand-ins and ask.
+them; when no line-up works, show the table with its stand-ins and the directional choice, and ask.
 
 After the rep's yes, make exactly the tracking changes approved (`user_confirmed=true`), wait for
 the ads to load, and recount each approved competitor with `search_competitor_brand_creatives`. Build only
-from tracked rows. When an added competitor still has fewer than 20 ads after set-asides, stop and tell the
+from tracked rows. When an added competitor still has fewer than 20 ads after set-asides (5 for a directional report), stop and tell the
 rep. Otherwise go on through Stage 8 in the same turn.
 
 **Logo.** Every page header carries the brand's own wordmark, so `brand.logo` is required. Run the
@@ -254,7 +267,7 @@ Drop ads that are not aimed at the buyer, such as recruiting or job ads. Put the
 that brand's `dropped` field, for the brand and every competitor, and what they were in its `dropped_why`, a
 short phrase in the reader's words that reads after "for" ("owners and realtors"). Page 3's footer prints the
 brand's own count with its phrase. The flags list each kind set aside with its count for every brand. Acquisition events
-and webinars are aimed at the buyer and stay. A competitor left with fewer than 20 buyer ads is replaced. If the brand itself has none left on the report platform, go back to step 2b and take the next platform; stop and tell the rep only when no platform has 5. Look at the media before tagging (contact sheets of
+and webinars are aimed at the buyer and stay. A competitor left with fewer than 20 buyer ads (5 in a directional report) is replaced. If the brand itself has none left on the report platform, go back to step 2b and take the next platform; stop and tell the rep only when no platform has 5. Look at the media before tagging (contact sheets of
 up to 40 thumbnails per brand with `visualize_file`); never tag from ad names.
 
 ## Stage 3: Tags
@@ -291,6 +304,11 @@ setup first, then write the lines against those counts.
   live means on that platform, from `capabilities.active_window_days` in `get_competitor_brand_details`
   ("seen in the last 7 days" on TikTok, "shown in the last 3 days" on Google); for LinkedIn, what the pull
   shows. The footer prints it. Every ad row may carry `platform`; one that differs from the spec's is refused.
+- `sample`: leave it out for the standard report. `"directional"` only when the rep chose it in Stage 1: every
+  competitor then needs 5 live ads instead of 20, and pages 1, 3 and 4 print "Small sample: <competitor> has N
+  live ads in this line, so read this as a direction." Page 4 shows a competitor that launched fewer than 5 ads
+  since the window began as "too few to compare", with no weeks bar. Any other value is refused. Say in the
+  Stage 8 reply that the report is directional and why.
 - `compare`: the one competitor the pages set beside the brand (a name in `brands[1:]`).
 - `focus`: `audience` (the tag most of the brand's own ads carry), `phrase` ("a mountain getaway", read after
   "live ads sell"), `short` ("A mountain trip") and `other` ("Another trip"): the two key words under page
@@ -384,7 +402,7 @@ free until the rep approves a check build and it is published (Stage 8). Never n
 "v3".
 
 `build` raises a ValueError when the spec breaks a rule in this skill: the word rules, a digit typed by hand, a
-competitor under 20 ads on the report platform, ads from more than one platform, `focus`, `named`, `one_home`, `guests`, `p1_ad` and `p3_ads` that do not match the ads,
+competitor under 20 ads on the report platform (under 5 with `sample` directional), a `sample` that is not "standard" or "directional", ads from more than one platform, `focus`, `named`, `one_home`, `guests`, `p1_ad` and `p3_ads` that do not match the ads,
 a line that names the brand or reads above grade 6, and the required inputs. It lists every problem at once; the
 error names the rule, the field and what to try next. Fix the spec and build again. `precheck(spec)` lists the
 same problems without building. `report.brand` flags a light logo set on a tile, a square mark, a missing logo or

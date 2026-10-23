@@ -59,6 +59,9 @@ INK, GREY, LIGHT = "#070707", "#B9B6B0", "#E6E3DE"
 PAPER, DARK = "#F7F5F0", "#101418"
 
 MIN_RIVAL_ADS = 20
+SMALL_SAMPLE_MIN = 5  # a competitor's live ads in a directional report (spec sample: "directional")
+SAMPLES = ("standard", "directional")
+MIN_LAUNCHES = 5  # launches in the window a directional report needs before it prints a competitor's weeks to launch
 
 PLATFORMS = {
     "META":     {"name": "Meta",     "library": "Meta Ad Library",                "bench": "FACEBOOK"},
@@ -1123,6 +1126,7 @@ class Report:
         self.as_of = dt.date.fromisoformat(spec["as_of"])
         self.start = window_start(self.as_of)
         self.pk = _pkey(spec)
+        self.directional = spec.get("sample") == "directional"
         if self.pk not in PLATFORMS:
             raise ValueError(f"platform {spec.get('platform')!r} must be one of {', '.join(PLATFORMS)}")
         self.P = PLATFORMS[self.pk]
@@ -1198,10 +1202,14 @@ class Report:
             for x, k in odd.items():
                 out.append(f"{b['name']}: {k} ads are from {PLATFORMS.get(x, {'name': x})['name']}, not {self.P['name']}: "
                            "count one platform per report")
+        if s.get("sample") not in (None, *SAMPLES):
+            out.append(f"sample {s['sample']!r} must be one of {', '.join(map(repr, SAMPLES))}, or left out")
+        floor = SMALL_SAMPLE_MIN if self.directional else MIN_RIVAL_ADS
         for m in M[1:]:
-            if m.live < MIN_RIVAL_ADS:
+            if m.live < floor:
                 out.append(f"{m.name} has {m.live} live guest ads after set-asides and ended ads; a competitor on "
-                           f"{self.P['name']} needs at least {MIN_RIVAL_ADS}. Replace it")
+                           f"{self.P['name']} needs at least {floor}" + (" even in a directional report" if self.directional else "")
+                           + ". Replace it")
         for m in M:
             if not m.market:
                 out.append(f"{m.name} needs a market, as the line-up's Market column says it")
@@ -1311,6 +1319,12 @@ class Report:
         return (f'<div class="run"><div class="brand">{mark}</div>'
                 f'<div class="when">From Crux, {long_date(self.as_of)}</div></div>')
 
+    def small_note(self):
+        """The footer line that labels a directional report, on the pages that set the compare competitor beside the brand."""
+        if not self.directional:
+            return ""
+        return f" Small sample: {esc(self.c.short)} has {plural(self.c.live, 'live ad')} in this line, so read this as a direction."
+
     def foot(self, n, left):
         return f'<footer><span>{left}</span><span>Prepared by Crux · {n} / 5</span></footer>'
 
@@ -1332,7 +1346,7 @@ class Report:
             out += " Image and video ads only."
         elif self.pk == "LINKEDIN":
             out += f" Pulled from LinkedIn's ad library on {long_date(self.as_of)}."
-        return out
+        return out + self.small_note()
 
     def page1(self):
         b0, c, s = self.M[0], self.c, self.s
@@ -1449,6 +1463,7 @@ class Report:
         left = "Who an ad is built for comes from its words and picture."
         if b0.dropped:
             left += f" We left out {b0.dropped} of your ads for {esc(b0.dropped_why)}."
+        left += self.small_note()
         return f'''<section class="page p2" data-page="3">
   {self.run()}
   <div class="head"><h1>What do competitors do that you don't?</h1>
@@ -1469,22 +1484,28 @@ class Report:
         out = "Only ads still running are counted. Public ads show no spend or sales."
         if n:
             out += f" {n} live ads show no start date and are not in the pace."
-        return out
+        return out + self.small_note()
 
     def page4(self):
         b0, c, s = self.M[0], self.c, self.s
         new = self.ctx["new_ads"]
         unit = s["one_home"]["unit"]
         wy, wc = round(new / b0.pace), round(new / c.pace)
-        base = max(wy, wc)
+        few = self.directional and c.n_new < MIN_LAUNCHES
+        base = wy if few else max(wy, wc)
         who = join_and([g["who"] for g in s["guests"]])
         since = f"{month_day(self.start)}"
         if c.peak >= 8 and c.peak >= 3 * max(b0.peak, 1):
             answer = f"About {b0.pace:g} new ads a week. {c.short} launched {c.peak} ads in one week."
         else:
             answer = f"About {b0.pace:g} new ads a week. {c.short} launched about {c.pace:g} a week."
-        bars = (f'<p class="hn you">You, {b0.pace:g} a week</p><div class="ht"><i class="y" style="width:{100 * wy / base:.1f}%"></i></div><p class="hv you">{plural(wy, "week")}</p>'
-                f'<p class="hn">{esc(c.short)}, {c.pace:g} a week</p><div class="ht"><i class="v" style="width:{100 * wc / base:.1f}%"></i></div><p class="hv">{plural(wc, "week")}</p>')
+        bars = f'<p class="hn you">You, {b0.pace:g} a week</p><div class="ht"><i class="y" style="width:{100 * wy / base:.1f}%"></i></div><p class="hv you">{plural(wy, "week")}</p>'
+        if few:
+            bars += f'<p class="small" style="grid-column:1/-1">{esc(c.short)} launched {plural(c.n_new, "ad")} since {since}, too few to compare.</p>'
+            wlabel = f"Weeks to launch {new} new ads: you {wy}; {esc(c.short)} launched too few ads to compare."
+        else:
+            bars += f'<p class="hn">{esc(c.short)}, {c.pace:g} a week</p><div class="ht"><i class="v" style="width:{100 * wc / base:.1f}%"></i></div><p class="hv">{plural(wc, "week")}</p>'
+            wlabel = f"Weeks to launch {new} new ads: you {wy}, {esc(c.short)} {wc}."
         cap = lambda m, who: f"{who} live ads: {m} went up in the last 30 days"
         rings = (ring_fig(b0.live, b0.last30, cap(b0.last30, "Your"), "var(--brand)")
                  + ring_fig(c.live, c.last30, cap(c.last30, poss(c.short)), "var(--bar-dark)"))
@@ -1510,7 +1531,7 @@ class Report:
   </div>
   <div class="grp">
   <p class="says">One ad each for {esc(who)} on your {b0.one_n} {esc(unit)} ads is {new} ads. At your pace, that is {plural(wy, "week")}.</p>
-  <div class="chart hb"><h2>Weeks to launch {new} new ads</h2><div class="hbars" role="img" aria-label="Weeks to launch {new} new ads: you {wy}, {esc(c.short)} {wc}.">{bars}</div></div>
+  <div class="chart hb"><h2>Weeks to launch {new} new ads</h2><div class="hbars" role="img" aria-label="{wlabel}">{bars}</div></div>
   </div>
   <div class="grp">
   <div class="chart rg"><h2>How many live ads went up in the last 30 days?</h2><div class="rings">{rings}</div><p class="says">{esc(first)} {esc(second)}</p></div>
