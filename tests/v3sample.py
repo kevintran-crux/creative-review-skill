@@ -62,15 +62,28 @@ if not out:
     pages = F.page_text(doc)
     check("the report counts are the real ones", [m.live for m in r.M[1:]] == [5, 6, 12], [m.live for m in r.M])
     c = r.c
-    line = f"Small sample: {c.short} has {c.live} live ads in this line, so read this as a direction."
+    line = "Small sample: Vrbo has 5, Inspirato has 6 and Airbnb has 12 live ads in this line, so read this as a direction."
     for n in (1, 3, 4):
-        check(f"page {n} carries the footer line with the real count ({c.live})", line in pages[n - 1], pages[n - 1][-250:])
+        check(f"page {n} carries one footer line naming every small competitor with its real count", line in pages[n - 1], pages[n - 1][-250:])
     for n in (2, 5):
         check(f"page {n} has no small-sample line", "Small sample" not in pages[n - 1])
     check("five pages", len(pages) == 5)
     # page 3 shows every competitor's real count in the chart
     for m in r.M[1:]:
         check(f"page 3 chart prints {m.short}'s {m.live} live ads", f"of {m.short}'s {m.live}" in pages[2] or f"of {F.kit.poss(m.short)} {m.live}" in pages[2], pages[2][:300])
+
+# ---- one small competitor keeps the one-name wording; a competitor of 20 or more is not called small
+def one_small(s):
+    pass
+doc, r = K.build(sp([5, 25, 30]))
+t = F.page_text(doc)
+check("one small competitor: the one-name line, not naming the large ones",
+      all("Small sample: Vrbo has 5 live ads in this line, so read this as a direction." in t[n - 1] for n in (1, 3, 4))
+      and "Inspirato has 25" not in " ".join(t), t[0][-200:])
+doc, r = K.build(sp([25, 5, 30], edit=lambda s: s.update(compare="Vrbo")))
+t = F.page_text(doc)
+check("a large compare with a small competitor beside it: the line names only the small one",
+      "Small sample: Inspirato has 5 live ads in this line, so read this as a direction." in t[0], t[0][-200:])
 
 # ---- refusals
 out = problems(sp([4, 6, 12]))
@@ -128,5 +141,23 @@ for label, spec_ in (("5, 6 and 12 ads", sp([5, 6, 12])), ("12, 12 and 12 ads, 3
         print(f"SKIP page fit, {label}: no browser here")
     else:
         check(f"directional {label}: five pages, each within A4, no broken image, no sideways scroll", fit == [], fit)
+
+# ---- a brand name that carries digits ("5.11 Tactical") is not "digits typed by hand" in alt text or lines
+def rename(s):
+    new = "5.11 Tactical"
+    old = s["brand"]["name"]
+    s["brand"]["name"] = new
+    s["brands"][0]["name"] = new
+    for x in s["p3_ads"]:
+        if x["brand"] == old:
+            x["brand"] = new
+        x["alt"] = x["alt"].replace(old, new)
+    s["text"]["p1"]["alt"] = "Your 5.11 Tactical ad in Big Sky: a great room with a long dining table under wood beams."
+out = problems(sp([5, 6, 12], edit=rename))
+check("brand name with digits: no digits-typed-by-hand problem", "digits typed by hand" not in out, out[:400])
+doc, _ = K.build(sp([5, 6, 12], edit=rename))
+check("brand name with digits prints as written in the header and title", '>5.11 Tactical</div>' in doc and "<title>5.11 Tactical Meta ads report</title>" in doc)
+out = problems(sp([5, 6, 12], edit=lambda s: s["text"]["p1"].update(works="You run 62 ads.")))
+check("other digits typed by hand are still refused", "digits typed by hand in text.p1.works" in out, out[:300])
 
 sys.exit(1 if fails else 0)

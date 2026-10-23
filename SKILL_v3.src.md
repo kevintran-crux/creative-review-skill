@@ -306,7 +306,7 @@ setup first, then write the lines against those counts.
   shows. The footer prints it. Every ad row may carry `platform`; one that differs from the spec's is refused.
 - `sample`: leave it out for the standard report. `"directional"` only when the rep chose it in Stage 1: every
   competitor then needs 5 live ads instead of 20, and pages 1, 3 and 4 print "Small sample: <competitor> has N
-  live ads in this line, so read this as a direction." Page 4 shows a competitor that launched fewer than 5 ads
+  live ads in this line, so read this as a direction." (every competitor under 20 is named, with its own count, the compare competitor first) Page 4 shows a competitor that launched fewer than 5 ads
   since the window began as "too few to compare", with no weeks bar. Any other value is refused. Say in the
   Stage 8 reply that the report is directional and why.
 - `compare`: the one competitor the pages set beside the brand (a name in `brands[1:]`).
@@ -384,7 +384,7 @@ Save the spec with its images as `spec-2.json`.
 
 {{LOAD}}
 
-Then load the tagged ads, build the `spec` (`brand` is `{"name", "accent", "logo"}`; the inputs go in as `rep`,
+Then load the tagged ads, build the `spec` (`brand` is `{"name", "accent", "logo"}`, and every `name` is written exactly as the brand writes it, "5.11 Tactical" and never "Five Eleven Tactical": the page header, the page title and the file name print it, and the kit accepts digits in a brand's name, in alt text and in lines. Never respell a name to get past a check; the inputs go in as `rep`,
 `rep_email` and `calendly`, the booking link, `https://calendly.com/atharva-getcrux/30min`), and:
 
 ```python
@@ -416,6 +416,7 @@ Open the check build with `visualize_file`, look at all five pages against this 
 
 - exactly five pages, nothing past the footer, no text overlapping or cut off (the page tightens its own spacing when a long name or a
   tall ad runs it past A4; a page still on a second sheet is a defect: shorten that page's lines or pick a shorter `short` name);
+- the header, and the file name, show the brand's name as the brand writes it, not respelled;
 - every page header shows the brand's own logo, sharp and readable, not a crop from an ad and not the brand
   name in plain text (unless `logo_missing` is set);
 - every image matches its caption, and every competitor ad is labelled with the competitor's name;

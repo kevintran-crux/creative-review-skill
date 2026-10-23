@@ -934,11 +934,14 @@ def join_and(items, oxford=False):
 def lint(spec):
     """Digits typed by hand in authored text, as (field, digits, text). Each must come from a placeholder instead."""
     found = []
+    names = sorted({n for b in spec.get("brands") or [] for n in (b.get("name"), b.get("short")) if n}, key=len, reverse=True)
 
     def scan(where, t):
         if isinstance(t, str):
             bare = re.sub(r"\{[^{}]*\}", "", t)
             bare = re.sub(r'"[^"]*"', "", bare)
+            for n in names:
+                bare = bare.replace(n, "")
             for m in re.finditer(r"\d[\d,.:%]*", bare):
                 found.append((where, m.group(0), t[:80]))
         elif isinstance(t, dict):
@@ -1321,9 +1324,13 @@ class Report:
 
     def small_note(self):
         """The footer line that labels a directional report, on the pages that set the compare competitor beside the brand."""
-        if not self.directional:
+        small = sorted((m for m in self.M[1:] if m.live < MIN_RIVAL_ADS), key=lambda m: m is not self.c)
+        if not self.directional or not small:
             return ""
-        return f" Small sample: {esc(self.c.short)} has {plural(self.c.live, 'live ad')} in this line, so read this as a direction."
+        if len(small) == 1:
+            return f" Small sample: {esc(small[0].short)} has {plural(small[0].live, 'live ad')} in this line, so read this as a direction."
+        who = join_and([f"{esc(m.short)} has {m.live}" for m in small])
+        return f" Small sample: {who} live ads in this line, so read this as a direction."
 
     def foot(self, n, left):
         return f'<footer><span>{left}</span><span>Prepared by Crux · {n} / 5</span></footer>'
