@@ -160,4 +160,83 @@ check("brand name with digits prints as written in the header and title", '>5.11
 out = problems(sp([5, 6, 12], edit=lambda s: s["text"]["p1"].update(works="You run 62 ads.")))
 check("other digits typed by hand are still refused", "digits typed by hand in text.p1.works" in out, out[:300])
 
+# ---- other directional shapes in the browser: other platforms, 18-character names, three competitors of exactly 5 ads
+def small_pages(doc):
+    """Which pages (1 to 5) carry the small-sample line."""
+    return [i for i, t in enumerate(F.page_text(doc), 1) if "Small sample:" in t]
+
+
+def fits(label, s, who=None):
+    out = problems(s)
+    check(f"{label}: no problem", not out, out[:600])
+    if out:
+        return
+    doc, r = K.build(s)
+    check(f"{label}: footer on pages 1, 3 and 4 only", small_pages(doc) == [1, 3, 4], small_pages(doc))
+    if who:
+        foot = re.sub(r"\s+", " ", re.findall(r"Small sample:.*?direction\.", F.page_text(doc)[3])[0])
+        check(f"{label}: page 4 footer names {', '.join(who)}", all(w in foot for w in who), foot)
+    fit = K.measure(doc)
+    if fit is None:
+        print(f"SKIP page fit, {label}: no browser here")
+    else:
+        check(f"{label}: five pages, each within A4, no broken image, no sideways scroll at 375 px", fit == [], fit)
+
+
+BENCH = F.benchmarks()
+for plat in ("TIKTOK", "GOOGLE", "LINKEDIN"):
+    fits(f"directional on {plat}, 5, 6 and 12 ads",
+         F.on(plat, BENCH[plat], F.RULES[plat], lambda s: (s.update(sample="directional"), trim(s, [5, 6, 12]))))
+
+LONG = ("Alpine Stays Group", "Summit Lodge Rents", "Valley Home Rental")
+
+
+def long_shorts(s):
+    for b, short in zip(s["brands"][1:], LONG):
+        b["short"] = short
+
+
+def reach(doc):
+    """At 375 px: (A4 problems from measure(), footers wider than the phone, elements past the phone that no overflow box clips,
+    as 'ancestor class' strings). None when no browser runs here."""
+    try:
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as pw:
+            b = pw.chromium.launch()
+            try:
+                pg = b.new_page(viewport={"width": 375, "height": 800})
+                pg.set_content(doc, wait_until="networkidle")
+                feet = pg.evaluate("[...document.querySelectorAll('footer')].filter(f => f.scrollWidth > f.clientWidth + 1 || f.getBoundingClientRect().right > 376).length")
+                past = pg.evaluate("""() => [...document.querySelectorAll('body *')].filter(e => e.getBoundingClientRect().right > 376
+                    && ![...Array(9)].reduce((a, _, i) => a.el && a.el.parentElement ? {el: a.el.parentElement, c: a.c || (a.el.parentElement !== document.documentElement && getComputedStyle(a.el.parentElement).overflowX !== 'visible')} : a, {el: e, c: false}).c)
+                    .map(e => e.closest('.bars') ? 'bars' : e.closest('footer') ? 'footer' : e.tagName)""")
+            finally:
+                b.close()
+    except Exception:
+        return None
+    return feet, sorted(set(past))
+
+
+# 18-character names: the footer wraps inside the phone and the A4 pages. The page 3 bar rows (grid of max-content columns) are
+# wider than a 375 px phone with names this long in a standard report too (21 px there, 4 px here); that is not the footer's.
+check("the three test names are 18 characters", [len(x) for x in LONG] == [18, 18, 18])
+for label, edit in (("", long_shorts), (", 3 launches", lambda s: (long_shorts(s), launches(3)(s)))):
+    s = sp([5, 6, 12], edit=edit)
+    real, K.measure = K.measure, lambda doc, notes=None: []
+    try:
+        doc, _ = K.build(s)
+    finally:
+        K.measure = real
+    check(f"directional, three 18-character names{label}: footer on pages 1, 3 and 4 only", small_pages(doc) == [1, 3, 4], small_pages(doc))
+    foot = re.sub(r"\s+", " ", re.findall(r"Small sample:.*?direction\.", F.page_text(doc)[3])[0])
+    check(f"directional, three 18-character names{label}: page 4 footer names all three", all(w in foot for w in LONG), foot)
+    fit, seen = real(doc), reach(doc)
+    if fit is None or seen is None:
+        print("SKIP page fit, 18-character names: no browser here")
+        continue
+    check(f"directional, three 18-character names{label}: five pages, none past A4", not [x for x in fit if "px tall" in x or "pages" in x or "load" in x], fit)
+    check(f"directional, three 18-character names{label}: no footer wider than a 375 px phone", seen[0] == 0, seen)
+    check(f"directional, three 18-character names{label}: the only thing past the phone is the page 3 bar rows", seen[1] == ["bars"], seen)
+fits("directional, three competitors of exactly 5 ads", sp([5, 5, 5]), ("Vrbo", "Airbnb", "Inspirato"))
+
 sys.exit(1 if fails else 0)

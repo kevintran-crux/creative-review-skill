@@ -79,12 +79,12 @@ repo). With it:
 
 ## Not measured
 
-- Other directional shapes in a browser: other platforms (TikTok, Google, LinkedIn) with `sample` directional; a competitor name
-  near the 18-character limit with the footer line; competitors with 5 ads in all three slots.
 - `tests/v3loader.py` (needs a local port and an installed skill file); the installable skill (`make_skill_v3.py` writes a draft
   only: `python3 make_skill_v3.py --draft` runs).
 - No copilot run against the new skill text: the Stage 1 wording is untested with a rep.
 - The cause of the two zero-ad imports (First Tactical, VIKTOS) is not looked at; the skill change is text only.
+- Competitor names with 18 characters were measured only at 5, 6 and 12 ads (with and without 3 launches), not with every ad
+  count; the page 3 bar-row overflow below was measured only for the Natural Retreats fixture.
 
 ## Second round: results
 
@@ -95,3 +95,52 @@ repo). With it:
 - Chromium: v3browser passes (24); the three-name directional build measures within A4 (kit `measure()` returns no problem).
 - Not changed: the deployed test skill in the GetCrux workspace still carries the first-round kit. It needs the new kit hosted and the
   skill text updated before the fixes can be tried in the copilot.
+
+## Third round: browser measures and notes
+
+Setup: `pip install playwright` gave 1.64.1, which wants Chromium revision 1248; the container has 1243. Nothing installed: a scratch
+directory with symlinks `chromium-1248` and `chromium_headless_shell-1248` to the installed 1243 builds, and
+`PLAYWRIGHT_BROWSERS_PATH` pointed at it (outside the repo).
+
+Results with Chromium (`for t in v3parity v3refuse v3edge v3checkcap v3platform v3sample v3browser`): v3parity 23, v3refuse 28,
+v3checkcap 13, v3platform 35, v3browser 24 checks pass; v3edge fails (below); v3sample 58 checks pass (34 before this round, 24 new, 22 of them in Chromium); v3edge passes 9 checks and then stops on the
+exception from the long-name build (exit 1). The default spec is still byte-identical to `tests/fixtures/base-kit-current.py`.
+
+**Why `v3edge.py` fails with Chromium (not fixed).** The long-name test sets the competitor's name to "Southern New Hampshire
+University" and leaves `short` unset, so `short` is 34 characters. The skill caps `short` at 18 characters for this reason (line 163
+of `SKILL_v3.src.md`: "a long name wraps and can push a page sideways"). The element that scrolls is page 3's bar rows: `.bars` is a
+grid of `max-content 1fr max-content` columns (build_kit_v3.py line 667), so the value label "65 of Southern New Hampshire University's 209"
+cannot wrap and the row is wider than a 375 px phone (240 px over). Without a browser `measure()` returns None and the test passes,
+which is why the offline run never showed it. The cause is the same on the unmodified kit. A fix is a CSS rule for the 640 px
+breakpoint (let `.bars` wrap or stack at phone width); that changes the CSS every report carries, so the default output would no longer
+match `tests/fixtures/base-kit-current.py` byte for byte. Left alone. The test could use a short of 18 or fewer, but then it would
+stop testing a long label on the speed chart, which is its point.
+
+**The same cause with names at the 18-character limit.** Three competitors with 18-character shorts ("Alpine Stays Group", "Summit Lodge
+Rents", "Valley Home Rental") push page 3's bar rows past a 375 px phone by 21 px in the standard report and by 4 px in the directional
+report with 5, 6 and 12 ads. So the 18-character limit does not by itself keep page 3 inside a phone. The small-sample footer is not
+the cause: footers fit at 375 px, the three names are all in the page 4 footer, and the only element past the phone is in `.bars`.
+Because the kit refuses any build whose `measure()` finds a sideways scroll, a directional build with three 18-character names is
+refused in a browser today ("the page scrolls sideways by 4 px"); it is the same refusal a standard build gets. Fix when someone
+accepts a one-time change to the standard output: in the `max-width: 640px` block, `.bars { grid-template-columns: max-content 1fr; }`
+with `.bars .val { grid-column: 1 / -1; }` would put each value under its bar.
+
+**Measured (all in Chromium, `tests/v3sample.py`):**
+
+| Build | Result |
+|---|---|
+| Directional on TIKTOK, GOOGLE, LINKEDIN, 5, 6 and 12 ads (`F.on`, `F.benchmarks()`) | builds; footer on pages 1, 3, 4 only; five pages, none past 1123 px, no sideways scroll at 375 px |
+| Three 18-character names, 5, 6 and 12 ads, and again with 3 launches | footer on pages 1, 3, 4 only; all three names in page 4's footer; five pages within A4; no footer wider than 375 px; the 4 px sideways scroll is page 3's bar rows (see above) |
+| Three competitors of exactly 5 ads | builds; footer names Vrbo, Airbnb, Inspirato; five pages within A4; no sideways scroll at 375 px |
+
+No footer wrapped badly, so no CSS or footer text was changed in this round.
+
+## Decision note: the launch guard in standard reports
+
+In a standard report a compare competitor that launched fewer than 5 ads in the window still prints a weeks figure from the same
+division: with 3 launches in 90 days the fixture's page 4 prints "Vrbo, 0.2 a week 675 weeks". The guard is not extended to standard
+reports in this branch, because it would change standard output and the spec says that must stay byte for byte today. A standard
+report needs 20 live ads from a competitor, so a competitor with 20 or more ads and under 5 launches is possible (a mature, quiet
+library) and does print a figure that large. Recommendation: extend the guard to standard reports, as its own change, with its own
+approval and a new baseline file (a quiet competitor is a real case, and "675 weeks" tells a rep nothing). Until then, nothing here
+changes it.
