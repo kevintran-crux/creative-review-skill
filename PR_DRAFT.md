@@ -4,7 +4,7 @@
 
 ## Summary
 
-The v3 report refuses to build when a competitor has fewer than 20 live ads in the product line. Reps on niche lines ask the copilot to "build it anyway", and on 2026-10-23 (5.11 Tactical, pants line) the copilot wrote its own HTML and skipped the kit's checks. This branch adds a supported path: spec field `sample: "directional"` lets competitors with 5 to 19 live ads in, labels the pages, and guards the one number that breaks on tiny samples. Absent or `"standard"`, the output is byte-for-byte what the kit built before.
+The v3 report refuses to build when a competitor has fewer than 20 live ads in the product line. Reps on niche lines ask the copilot to "build it anyway", and on 2026-10-23 (5.11 Tactical, pants line) the copilot wrote its own HTML and skipped the kit's checks. This branch adds a supported path: spec field `sample: "directional"` lets competitors with 5 to 19 live ads in, labels the pages, and guards the one number that breaks on tiny samples. Absent or `"standard"`, the report is what the kit built before, except for four phone-width CSS lines (below).
 
 ## What changed
 
@@ -19,6 +19,7 @@ The v3 report refuses to build when a competitor has fewer than 20 live ads in t
   - Setup list and refusal list name `sample` and the floor of 5.
   - Zero-ad imports are checked against the Meta Ad Library page before a competitor is replaced (text only).
   - Names are written exactly as the brand writes them.
+- Four CSS lines at phone width for the page 3 and page 4 bars (see below).
 - `tests/v3sample.py` (new), `tests/fixtures/base-kit-current.py` (new baseline: the kit before this change), `CHANGES.md`.
 
 ## Test results
@@ -31,13 +32,13 @@ Run with Chromium 1243 (symlinked for Playwright 1.64.1, nothing installed in th
 | v3refuse | 28 pass |
 | v3checkcap | 13 pass |
 | v3platform | 35 pass |
-| v3sample | 58 pass (default and `"standard"` specs byte-identical to the baseline kit) |
+| v3sample | 59 pass (default and `"standard"` specs equal the baseline kit's output plus the phone CSS, byte for byte) |
 | v3browser | 24 pass (Meta, TikTok, Google, LinkedIn) |
-| v3edge | fails with Chromium, passes without it; same on the unmodified kit |
+| v3edge | 20 pass |
 
 Measured in Chromium for directional builds: TikTok, Google and LinkedIn (5, 6 and 12 ads); three 18-character competitor names with the three-name footer; three competitors of exactly 5 ads. Each is five pages within 1123 px; footers fit at 375 px.
 
-`v3edge` failure and a related limit: page 3's bar rows (`.bars`, a grid of `max-content` columns) run wider than a 375 px phone with long competitor names. The `v3edge` long-name test uses a 34-character name; three names at the 18-character limit overflow by 21 px in a standard report and 4 px in a directional one, so the kit's `measure()` refuses that build today. It is not the footer. A CSS fix would change standard output, so it is left for a separate decision. Details in `CHANGES.md`.
+Phone-width fix: page 3's and page 4's bar rows were wider than a 375 px phone with long competitor names (v3edge failed with Chromium on the unmodified kit; three names at the 18-character limit overflowed by 21 px in a standard report). Four CSS lines in the 640 px block put each value under its bar. This changes the CSS every report carries, so standard output is no longer byte-identical to the old baselines; `v3sample` and `v3platform` now compare against the old kit's output plus exactly those four lines. v3edge now passes (20).
 
 ## Not measured
 
@@ -51,4 +52,5 @@ Measured in Chromium for directional builds: TikTok, Google and LinkedIn (5, 6 a
 
 - In a standard report, a competitor with 20 or more ads that launched under 5 in the window still prints a very large weeks figure on page 4 (the fixture with 3 launches prints "675 weeks"). The guard is not extended to standard reports because that would change standard output. `CHANGES.md` recommends doing it as its own change.
 - Scope: against `main`, this diff is the directional report only. `main` already carries the TikTok, Google and LinkedIn code in the kit. The live skill does not have that platform support yet, so shipping this kit also ships it; the platform tests (`v3platform`, `v3browser`) cover it.
+- `RELEASE_STEPS.md` lists the steps from here to the live skill.
 - `PLAN.md` and `CHANGES.md` are working notes; remove or keep as the owner prefers.

@@ -144,3 +144,24 @@ report needs 20 live ads from a competitor, so a competitor with 20 or more ads 
 library) and does print a figure that large. Recommendation: extend the guard to standard reports, as its own change, with its own
 approval and a new baseline file (a quiet competitor is a real case, and "675 weeks" tells a rep nothing). Until then, nothing here
 changes it.
+
+## Fourth round: page 3 and page 4 bars on a phone
+
+Change (`build_kit_v3.py`, inside the `max-width: 640px` block, four lines): `.bars` and `.hbars` (page 3's named-guest bars and
+page 4's weeks bars) drop to two columns (`minmax(0, max-content) 1fr`: the name can wrap, the bar takes the rest) and the value
+(`.val`, `.hv`) goes on its own row under its bar. Wider than 640 px, and in print, nothing changes. This replaces the "not fixed" cause
+above: the 34-character name also pushed page 4's weeks bars (113 px) once page 3's were fixed, so both charts needed the rule.
+
+Effect on standard output: every report now carries these four CSS lines, so output is no longer byte-identical to
+`tests/fixtures/base-kit-current.py` or to `base-kit-a04b115ebc4a.py`. Both tests (v3sample, v3platform) now compare against the
+baseline kit's output with those four lines added (`F.with_phone_css` in `tests/v3fixture.py`), and v3sample checks that this is the only
+difference. A phone-width screenshot of both charts with the three 18-character names looks right (name above its bar, value under it).
+
+Results with Chromium: v3parity 23, v3refuse 28, v3edge 20 (was failing), v3checkcap 13, v3platform 35, v3sample 59, v3browser 24;
+no failure. The three 18-character names now have no sideways scroll at 375 px (the 4 px overflow is gone).
+
+Added `RELEASE_STEPS.md`: the steps from this branch to the live skill (copy, build, host, test copy, check chat, live), with the
+files to copy and what to look for. Not done here: none of those steps can be run from this session.
+
+Still open and decided by Kevin: extending the "too few to compare" guard to standard reports; a kit-side refusal of a `short` over 18
+characters; opening the pull request.

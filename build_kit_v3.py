@@ -722,6 +722,10 @@ CSS = r"""
     .nums.n2 { grid-template-columns: 1fr; grid-template-rows: none; row-gap: var(--s-16); }
     .nums.n2 > div { display: block; grid-row: auto; }
     .bars .val { font-size: var(--t-20); }
+    .bars { grid-template-columns: minmax(0, max-content) 1fr; }
+    .bars .val { grid-column: 1 / -1; }
+    .hbars { grid-template-columns: minmax(0, max-content) 1fr; }
+    .hbars .hv { grid-column: 1 / -1; }
     .run { flex-wrap: wrap; gap: var(--s-4) var(--s-16); }
     .page h1 { font-size: var(--t-28); }
     .lede { font-size: var(--t-16); }

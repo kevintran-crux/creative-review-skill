@@ -46,6 +46,10 @@ old = importlib.util.module_from_spec(base)
 base.loader.exec_module(old)
 old._fonts = K._fonts
 want, _ = old.build(F.spec())
+# the one change since the baseline kit was saved: the phone-width rules for the page 3 and page 4 bars (CSS only)
+raw = want
+want = F.with_phone_css(raw)
+check("the baseline kit's output differs from the saved one by the phone CSS only", want != raw and want.count(".hbars .hv { grid-column") == 1)
 got, _ = K.build(F.spec())
 check("default spec: output equals the baseline kit's, byte for byte", got == want)
 s = F.spec()
@@ -217,8 +221,8 @@ def reach(doc):
     return feet, sorted(set(past))
 
 
-# 18-character names: the footer wraps inside the phone and the A4 pages. The page 3 bar rows (grid of max-content columns) are
-# wider than a 375 px phone with names this long in a standard report too (21 px there, 4 px here); that is not the footer's.
+# 18-character names: the footer wraps inside the phone and the A4 pages, and nothing runs past a 375 px phone (before the phone
+# CSS for the page 3 bar rows, these names pushed them 4 px past it; a 34-character name still did, see v3edge).
 check("the three test names are 18 characters", [len(x) for x in LONG] == [18, 18, 18])
 for label, edit in (("", long_shorts), (", 3 launches", lambda s: (long_shorts(s), launches(3)(s)))):
     s = sp([5, 6, 12], edit=edit)
@@ -234,9 +238,9 @@ for label, edit in (("", long_shorts), (", 3 launches", lambda s: (long_shorts(s
     if fit is None or seen is None:
         print("SKIP page fit, 18-character names: no browser here")
         continue
-    check(f"directional, three 18-character names{label}: five pages, none past A4", not [x for x in fit if "px tall" in x or "pages" in x or "load" in x], fit)
+    check(f"directional, three 18-character names{label}: five pages, none past A4, no sideways scroll at 375 px", fit == [], fit)
     check(f"directional, three 18-character names{label}: no footer wider than a 375 px phone", seen[0] == 0, seen)
-    check(f"directional, three 18-character names{label}: the only thing past the phone is the page 3 bar rows", seen[1] == ["bars"], seen)
+    check(f"directional, three 18-character names{label}: nothing past the phone", seen[1] == [], seen)
 fits("directional, three competitors of exactly 5 ads", sp([5, 5, 5]), ("Vrbo", "Airbnb", "Inspirato"))
 
 sys.exit(1 if fails else 0)

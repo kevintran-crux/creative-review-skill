@@ -38,6 +38,7 @@ base = types.ModuleType("base_kit")
 exec(base_src.decode(), base.__dict__)
 base._fonts = K._fonts
 want, _ = base.build(F.spec())
+want = F.with_phone_css(want)
 got, _ = K.build(F.spec())
 check("Meta output is byte-identical to a04b115ebc4a", got == want, f"{len(got)} vs {len(want)} bytes")
 

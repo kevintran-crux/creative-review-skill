@@ -128,3 +128,11 @@ def on(plat, bench, rule, edit=None):
 
 
 RULES = {"TIKTOK": "seen in the last 7 days", "GOOGLE": "shown in the last 3 days", "LINKEDIN": "in LinkedIn's ad library on the day it was pulled"}
+
+
+def with_phone_css(doc):
+    """A report from an older kit with the phone-width rules for the page 3 and page 4 bars added: the only change to the CSS since
+    those kits were saved."""
+    old = "    .bars .val { font-size: var(--t-20); }\n"
+    return doc.replace(old, old + "    .bars { grid-template-columns: minmax(0, max-content) 1fr; }\n    .bars .val { grid-column: 1 / -1; }\n"
+                       "    .hbars { grid-template-columns: minmax(0, max-content) 1fr; }\n    .hbars .hv { grid-column: 1 / -1; }\n")
